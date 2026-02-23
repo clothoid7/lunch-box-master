@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职场带饭大师 · 高效备餐版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .selected-card { 
+            ring: 3px solid #0d9488; 
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.3);
+            background: linear-gradient(to bottom right, #f0fdfa, #ccfbf1);
+        }
+        .ingredient-card { transition: all 0.2s ease; cursor: pointer; }
+        .ingredient-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tag-lowfat { background: #dbeafe; color: #1e40af; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .tag-highfiber { background: #dcfce7; color: #166534; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .tag-frozen { background: #e0f2fe; color: #0369a1; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid #bae6fd; }
+        .scroll-container { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .nutrition-bar { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .nutrition-fill { height: 100%; background: linear-gradient(90deg, #0d9488, #14b8a6); transition: width 0.5s ease; }
+        .prep-card { background: linear-gradient(to right, #fffbeb, #fef3c7); border: 1px solid #fcd34d; }
+        .tip-box { position: relative; padding-left: 1rem; }
+        .tip-box::before { content: "⏰"; position: absolute; left: 0; }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-teal-50/30 to-blue-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-teal-100">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-tr from-teal-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    🍱
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">职场带饭大师</h1>
+                    <p class="text-xs text-gray-500 flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 bg-teal-100 text-teal-700 rounded text-[10px] font-bold">高血脂友好</span>
+                        <span>高效备餐 · 冷冻友好</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="randomMeal()" class="px-4 py-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white text-sm rounded-lg shadow-md hover:shadow-lg transition-all">
+                    🎲 随机搭配
+                </button>
+                <button onclick="resetAll()" class="px-4 py-2 text-sm text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                    重置
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Nutrition Dashboard -->
+        <section id="nutritionDashboard" class="hidden bg-white rounded-2xl shadow-sm border border-teal-100 p-4 mb-6">
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">预估热量</div>
+                    <div class="text-xl font-bold text-gray-800"><span id="calCount">0</span> <span class="text-xs font-normal">kcal</span></div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">膳食纤维</div>
+                    <div class="text-xl font-bold text-teal-600"><span id="fiberCount">0</span> <span class="text-xs font-normal">g</span></div>
+                    <div class="nutrition-bar w-16 mx-auto"><div id="fiberBar" class="nutrition-fill" style="width: 0%"></div></div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">饱和脂肪</div>
+                    <div class="text-xl font-bold text-blue-600"><span id="fatCount">0</span> <span class="text-xs font-normal">g</span></div>
+                    <div class="text-[10px] text-gray-400 mt-1">低脂标准 &lt;5g</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 1: Ingredient Selection -->
+        <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">1</span>
+                    <h2 class="text-lg font-bold text-gray-800">智能食材库 <span class="text-sm font-normal text-gray-500 ml-2">（<span class="text-blue-600 font-medium">蓝色标签</span>为冷冻食材，需提前解冻）</span></h2>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Column A: Staples (Expanded with Chinese options) -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                            <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+                            低GI主食区
+                        </h3>
+                        <span class="text-xs text-gray-400">选1项</span>
+                    </div>
+                    <div class="space-y-2 max-h-[480px] overflow-y-auto scroll-container pr-1">
+                        <div onclick="selectIngredient('A', 'A1', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A1" data-cal="150" data-fiber="3" data-fat="0.5" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">A1. 杂粮饭</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">黑米+燕麦米+糙米，分装冷冻</div>
+                                </div>
+                                <span class="text-xl">🍚</span>
+                            </div>
+                        </div>
+                        
+                        <div onclick="selectIngredient('A', 'A2', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A2" data-cal="120" data-fiber="4" data-fat="0.2">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A2. 贝贝南瓜/山药</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">常温保存，蒸制最佳</div>
+                                </div>
+                                <span class="text-xl">🎃</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A3', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A3" data-cal="100" data-fiber="2.5" data-fat="0.3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A3. 甜玉米段</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">可冷冻保存，微波3分钟</div>
+                                </div>
+                                <span class="text-xl">🌽</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A4', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A4" data-cal="140" data-fiber="5" data-fat="0.4">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A4. 藜麦/荞麦面</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                        <span class="tag-lowfat">低脂</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">完全蛋白，冷食口感佳</div>
+                                </div>
+                                <span class="text-xl">🌾</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A5', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A5" data-cal="130" data-fiber="3" data-fat="0.2">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A5. 红薯/紫薯</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">常温保存，花青素丰富</div>
+                                </div>
+                                <span class="text-xl">🍠</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A6', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A6" data-cal="110" data-fiber="6" data-fat="0.5">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A6. 钢切燕麦饭</span>
+                                        <span class="tag-highfiber">极高纤</span>
+                                        <span class="tag-lowfat">低脂</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">β-葡聚糖助降胆固醇</div>
+                                </div>
+                                <span class="text-xl">🥣</span>
+                            </div>
+                        </div>
+
+                        <!-- 新增中式主食 -->
+                        <div onclick="selectIngredient('A', 'A7', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A7" data-cal="135" data-fiber="4" data-fat="0.5" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">A7. 杂粮窝窝头</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">玉米面+黄豆面，传统粗粮</div>
+                                </div>
+                                <span class="text-xl">🥟</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A8', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A8" data-cal="160" data-fiber="3" data-fat="0.8" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">A8. 黄馍馍</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">糜子面+红豆馅，陕北风味</div>
+                                </div>
+                                <span class="text-xl">🫓</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('A', 'A9', this)" class="ingredient-card bg-amber-50 border border-amber-200 rounded-xl p-3" data-code="A9" data-cal="125" data-fiber="4" data-fat="0.3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">A9. 荞麦馒头/发糕</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">荞麦面制作，低GI主食</div>
+                                </div>
+                                <span class="text-xl">🥠</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column B: Protein -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                            <span class="w-2 h-2 bg-rose-500 rounded-full"></span>
+                            优质蛋白区
+                        </h3>
+                        <span class="text-xs text-gray-400">选1项</span>
+                    </div>
+                    <div class="space-y-2 max-h-[480px] overflow-y-auto scroll-container pr-1">
+                        <div onclick="selectIngredient('B', 'B1', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B1" data-cal="180" data-fiber="0" data-fat="8" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">B1. 盐曲鳕鱼/三文鱼</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                        <span class="tag-omega">Omega-3</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">深海鱼油助降血脂，需提前解冻</div>
+                                </div>
+                                <span class="text-xl">🐟</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('B', 'B2', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B2" data-cal="120" data-fiber="0" data-fat="2" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">B2. 盐曲鸡胸/虾仁</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                        <span class="tag-lowfat">极低脂</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">预腌分装，冷藏解冻一夜</div>
+                                </div>
+                                <span class="text-xl">🍤</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('B', 'B3', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B3" data-cal="140" data-fiber="0" data-fat="3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">B3. 卤牛腱/水浸金枪鱼</span>
+                                        <span class="tag-lowfat">即食</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">牛腱可分装冷冻，罐头即食</div>
+                                </div>
+                                <span class="text-xl">🥩</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('B', 'B4', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B4" data-cal="100" data-fiber="1" data-fat="1.5">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">B4. 嫩豆腐/水煮蛋</span>
+                                        <span class="tag-lowfat">植物蛋白</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">豆腐需冷藏，鸡蛋常温</div>
+                                </div>
+                                <span class="text-xl">🥚</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('B', 'B5', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B5" data-cal="90" data-fiber="0" data-fat="0">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">B5. 希腊酸奶/茅屋奶酪</span>
+                                        <span class="tag-lowfat">冷藏</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">冷餐专用，无需加热</div>
+                                </div>
+                                <span class="text-xl">🥛</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('B', 'B6', this)" class="ingredient-card bg-rose-50 border border-rose-200 rounded-xl p-3" data-code="B6" data-cal="160" data-fiber="0" data-fat="5" data-frozen="true">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-semibold text-gray-800 text-sm">B6. 去皮鸡腿肉</span>
+                                        <span class="tag-frozen">冷冻</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">比鸡胸更嫩，提前一晚解冻</div>
+                                </div>
+                                <span class="text-xl">🍗</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column C: Vegetables -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                            <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                            高纤蔬菜区
+                        </h3>
+                        <span class="text-xs text-gray-400">选1项</span>
+                    </div>
+                    <div class="space-y-2 max-h-[480px] overflow-y-auto scroll-container pr-1">
+                        <div onclick="selectIngredient('C', 'C1', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C1" data-cal="35" data-fiber="2" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C1. 西葫芦/茄子/番茄</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">可提前洗切，厨房纸吸干</div>
+                                </div>
+                                <span class="text-xl">🍆</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('C', 'C2', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C2" data-cal="40" data-fiber="3" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C2. 秋葵/西蓝花/菜花</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">西蓝花可提前焯水1分钟冷藏</div>
+                                </div>
+                                <span class="text-xl">🥦</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('C', 'C3', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C3" data-cal="20" data-fiber="1.5" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C3. 生菜/芝麻菜/菠菜</span>
+                                        <span class="tag-lowfat">即食</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">脱水蔬菜盒保存，随取随用</div>
+                                </div>
+                                <span class="text-xl">🥬</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('C', 'C4', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C4" data-cal="30" data-fiber="2.5" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C4. 彩椒/芦笋/荷兰豆</span>
+                                        <span class="tag-highfiber">高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">芦笋提前切段，彩椒切条</div>
+                                </div>
+                                <span class="text-xl">🫑</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('C', 'C5', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C5" data-cal="25" data-fiber="3" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C5. 蘑菇/木耳/金针菇</span>
+                                        <span class="tag-highfiber">极高纤</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">木耳提前泡发，蘑菇擦干冷藏</div>
+                                </div>
+                                <span class="text-xl">🍄</span>
+                            </div>
+                        </div>
+
+                        <div onclick="selectIngredient('C', 'C6', this)" class="ingredient-card bg-green-50 border border-green-200 rounded-xl p-3" data-code="C6" data-cal="30" data-fiber="2" data-fat="0" data-prep="wash">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-gray-800 text-sm">C6. 黄瓜/胡萝卜/樱桃萝卜</span>
+                                        <span class="tag-lowfat">即食</span>
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 mt-1">可提前切条，密封盒保存3天</div>
+                                </div>
+                                <span class="text-xl">🥕</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Cooking Mode -->
+        <section id="modeSection" class="hidden fade-in">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">2</span>
+                <h2 class="text-lg font-bold text-gray-800">智能烹饪方案</h2>
+            </div>
+            <div id="modeCards" class="space-y-3"></div>
+        </section>
+
+        <!-- Step 3: Flavor Station -->
+        <section id="flavorSection" class="hidden fade-in bg-white rounded-2xl shadow-sm border border-purple-100 p-6">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">3</span>
+                <h2 class="text-lg font-bold text-gray-800">风味实验室 <span class="text-sm font-normal text-gray-500">（高血脂建议选择油醋汁或香草）</span></h2>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <button onclick="selectFlavor('vinaigrette')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-teal-400 hover:bg-teal-50 transition-all text-left" data-flavor="vinaigrette">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🫒</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">意式油醋汁</div>
+                            <div class="text-[11px] text-gray-500 mt-1">橄榄油+黑醋+芥末<br><span class="text-teal-600 font-medium">♥ 降脂推荐</span></div>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="selectFlavor('sesame')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-amber-400 hover:bg-amber-50 transition-all text-left" data-flavor="sesame">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🥜</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">和风芝麻酱</div>
+                            <div class="text-[11px] text-gray-500 mt-1">低脂焙煎芝麻+酱油<br>浓郁日式风味</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="selectFlavor('herb')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-green-400 hover:bg-green-50 transition-all text-left" data-flavor="herb">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🌿</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">香草柠檬海盐</div>
+                            <div class="text-[11px] text-gray-500 mt-1">迷迭香+柠檬皮+海盐<br><span class="text-teal-600 font-medium">♥ 零脂低钠</span></div>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="selectFlavor('garlic')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-red-400 hover:bg-red-50 transition-all text-left" data-flavor="garlic">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🧄</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">蒜蓉辣酱</div>
+                            <div class="text-[11px] text-gray-500 mt-1">鲜蒜+小米辣+生抽<br>代谢加速</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="selectFlavor('wasabi')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-cyan-400 hover:bg-cyan-50 transition-all text-left" data-flavor="wasabi">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🍣</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">芥末酱油</div>
+                            <div class="text-[11px] text-gray-500 mt-1">山葵+刺身酱油+葱花<br>适合海鲜冷餐</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button onclick="selectFlavor('nuts')" class="flavor-btn group relative rounded-xl border-2 border-gray-200 p-4 hover:border-yellow-600 hover:bg-yellow-50 transition-all text-left" data-flavor="nuts">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🌰</span>
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">香脆坚果碎</div>
+                            <div class="text-[11px] text-gray-500 mt-1">核桃+杏仁+白芝麻<br>优质脂肪增香</div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- Final Result -->
+        <section id="resultSection" class="hidden fade-in space-y-4">
+            
+            <!-- Content Card -->
+            <div class="bg-gradient-to-r from-teal-500 to-blue-600 rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24 blur-2xl"></div>
+                
+                <div class="relative z-10 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium border border-white/30">
+                            您的专属职场便当
+                        </span>
+                        <span id="healthBadge" class="px-3 py-1 bg-teal-400/30 backdrop-blur-sm rounded-full text-xs font-bold border border-teal-300/50">
+                            高血脂友好 ✓
+                        </span>
+                    </div>
+                    
+                    <h2 id="resultTitle" class="text-2xl md:text-3xl font-bold leading-tight"></h2>
+                    
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        <span id="badgeA" class="px-3 py-1 bg-white/20 rounded-lg backdrop-blur-sm"></span>
+                        <span class="text-white/60">+</span>
+                        <span id="badgeB" class="px-3 py-1 bg-white/20 rounded-lg backdrop-blur-sm"></span>
+                        <span class="text-white/60">+</span>
+                        <span id="badgeC" class="px-3 py-1 bg-white/20 rounded-lg backdrop-blur-sm"></span>
+                    </div>
+
+                    <p id="resultDesc" class="text-white/90 text-sm leading-relaxed max-w-2xl"></p>
+                    
+                    <div id="flavorResult" class="hidden pt-4 border-t border-white/20">
+                        <span class="text-xs opacity-90 uppercase tracking-wider">风味加持</span>
+                        <div id="flavorText" class="font-bold text-lg mt-1"></div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 pt-4 text-xs md:text-sm">
+                        <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg flex items-center gap-2">
+                            <span>⏱️</span>
+                            <span><span id="timeDisplay">15</span>分钟出品</span>
+                        </div>
+                        <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg flex items-center gap-2">
+                            <span>🔥</span>
+                            <span id="methodDisplay"></span>
+                        </div>
+                        <div class="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg flex items-center gap-2">
+                            <span>♻️</span>
+                            <span>微波炉复热友好</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prep Tips Card (New) -->
+            <div id="prepTipsCard" class="prep-card rounded-2xl p-5 border border-yellow-400/50 shadow-sm">
+                <h3 class="font-bold text-amber-800 mb-3 flex items-center gap-2">
+                    <span>⏰</span> 
+                    前置备餐贴士（今晚/明早准备）
+                </h3>
+                <div id="prepContent" class="space-y-2 text-sm text-amber-900">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="generateWeeklyPlan()" class="p-4 bg-white border border-teal-200 rounded-xl text-teal-700 font-semibold hover:bg-teal-50 transition-all shadow-sm text-sm">
+                    📋 生成一周带饭计划
+                </button>
+                <button onclick="shareMeal()" class="p-4 bg-white border border-blue-200 rounded-xl text-blue-700 font-semibold hover:bg-blue-50 transition-all shadow-sm text-sm">
+                    📤 保存今日方案
+                </button>
+            </div>
+        </section>
+
+        <!-- Weekly Plan Modal -->
+        <div id="weeklyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center bg-gradient-to-r from-teal-50 to-blue-50">
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800">一周带饭计划表</h3>
+                        <p class="text-xs text-gray-500">高血脂友好 · 低盐低脂 · 15分钟快手</p>
+                    </div>
+                    <button onclick="closeWeeklyModal()" class="w-8 h-8 rounded-full hover:bg-white/80 flex items-center justify-center">✕</button>
+                </div>
+                <div class="p-6 space-y-4" id="weeklyContent"></div>
+                <div class="sticky bottom-0 bg-gray-50 p-4 border-t flex gap-3">
+                    <button onclick="window.print()" class="flex-1 py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-700 text-sm">
+                        🖨️ 打印/存PDF贴冰箱
+                    </button>
+                    <button onclick="closeWeeklyModal()" class="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-100 text-sm">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Meals History -->
+        <section id="historySection" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span>📚</span> 我的带饭方案库
+            </h3>
+            <div id="savedMealsList" class="space-y-2"></div>
+        </section>
+
+    </main>
+
+    <script>
+        // Enhanced Data with Prep Tips
+        const ingredients = {
+            // Staples (A) - 新增窝窝头、黄馍馍
+            A1: { name: '杂粮饭', icon: '🍚', type: 'staple', tags: ['高纤'], cal: 150, fiber: 3, fat: 0.5, desc: '黑米+燕麦米+糙米，分装冷冻', isFrozen: true, prepTip: '冷冻饭团提前一晚放冷藏室解冻，或当天微波高火3分钟直接解冻加热' },
+            A2: { name: '贝贝南瓜', icon: '🎃', type: 'staple', tags: ['高纤'], cal: 120, fiber: 4, fat: 0.2, desc: '低GI碳水', isFrozen: false, prepTip: '常温保存，可提前一晚洗净，第二天直接蒸（无需削皮，蒸熟后皮可吃）' },
+            A3: { name: '甜玉米段', icon: '🌽', type: 'staple', tags: [], cal: 100, fiber: 2.5, fat: 0.3, desc: '可冷冻保存，微波3分钟', isFrozen: true, prepTip: '冷冻玉米段无需解冻，直接微波高火3分钟；新鲜玉米可提前煮好冷藏' },
+            A4: { name: '藜麦饭', icon: '🌾', type: 'staple', tags: ['高纤', '低脂'], cal: 140, fiber: 5, fat: 0.4, desc: '完全蛋白，冷食口感佳', isFrozen: true, prepTip: '藜麦煮好沥干分装冷冻，提前一晚冷藏解冻，冷餐也很适合' },
+            A5: { name: '红薯/紫薯', icon: '🍠', type: 'staple', tags: ['高纤'], cal: 130, fiber: 3, fat: 0.2, desc: '花青素抗氧化', isFrozen: false, prepTip: '可周末批量蒸好冷藏，吃前微波2分钟；或当天早晨蒸锅20分钟' },
+            A6: { name: '钢切燕麦', icon: '🥣', type: 'staple', tags: ['极高纤', '低脂'], cal: 110, fiber: 6, fat: 0.5, desc: 'β-葡聚糖降胆固醇', isFrozen: true, prepTip: '钢切燕麦需煮20分钟，建议周末煮好分装冷冻，提前一晚解冻' },
+            A7: { name: '杂粮窝窝头', icon: '🥟', type: 'staple', tags: ['高纤'], cal: 135, fiber: 4, fat: 0.5, desc: '玉米面+黄豆面，传统粗粮', isFrozen: true, prepTip: '冷冻窝窝头提前一晚放冷藏，或早晨直接蒸10分钟（无需解冻）' },
+            A8: { name: '黄馍馍', icon: '🫓', type: 'staple', tags: ['高纤'], cal: 160, fiber: 3, fat: 0.8, desc: '糜子面+红豆馅，陕北风味', isFrozen: true, prepTip: '冷冻黄馍馍蒸12分钟，建议提前一晚放冷藏室缓慢解冻，次日蒸8分钟即热' },
+            A9: { name: '荞麦馒头', icon: '🥠', type: 'staple', tags: ['高纤'], cal: 125, fiber: 4, fat: 0.3, desc: '荞麦面制作，低GI主食', isFrozen: true, prepTip: '馒头类提前一晚冷藏解冻，次日蒸5分钟；或微波20秒解冻+蒸3分钟' },
+            
+            // Proteins (B)
+            B1: { name: '盐曲鳕鱼', icon: '🐟', type: 'protein', tags: ['Omega-3'], cal: 180, fiber: 0, fat: 8, desc: '深海鱼油助降血脂', isFrozen: true, prepTip: '冷冻鳕鱼提前一晚放冷藏室缓慢解冻（口感最佳），紧急可用冷水泡30分钟' },
+            B2: { name: '盐曲鸡胸', icon: '🍤', type: 'protein', tags: ['极低脂'], cal: 120, fiber: 0, fat: 2, desc: '预腌分装', isFrozen: true, prepTip: '腌制好的鸡胸分装冷冻，提前一晚放冷藏解冻，次日直接烹饪' },
+            B3: { name: '卤牛腱', icon: '🥩', type: 'protein', tags: ['低脂'], cal: 140, fiber: 0, fat: 3, desc: '即食型，冷餐首选', isFrozen: true, prepTip: '卤好的牛腱切片分装冷冻，提前一晚冷藏解冻；或做冷餐当天早晨取出中午即食' },
+            B4: { name: '嫩豆腐', icon: '🥚', type: 'protein', tags: ['植物蛋白'], cal: 100, fiber: 1, fat: 1.5, desc: '大豆异黄酮，零胆固醇', isFrozen: false, prepTip: '嫩豆腐提前1小时从冰箱取出回温（避免冷食伤胃），或直接使用' },
+            B5: { name: '希腊酸奶', icon: '🥛', type: 'protein', tags: ['脱脂'], cal: 90, fiber: 0, fat: 0, desc: '冷餐专用', isFrozen: false, prepTip: '冷藏酸奶无需处理，冷餐直接使用；冬季可提前1小时取出回温' },
+            B6: { name: '去皮鸡腿', icon: '🍗', type: 'protein', tags: [], cal: 160, fiber: 0, fat: 5, desc: '比鸡胸更嫩', isFrozen: true, prepTip: '冷冻鸡腿提前一晚冷藏解冻，腌制入味需至少4小时（建议周末腌好冷冻）' },
+            
+            // Vegetables (C) - 带 prep 标记
+            C1: { name: '西葫芦/茄子', icon: '🍆', type: 'veg', tags: [], cal: 35, fiber: 2, fat: 0, desc: '茄科蔬菜，吸油少', isFrozen: false, prepTip: '可前一晚洗净切条，厨房纸吸干水分，密封盒冷藏；茄子切后易氧化，建议早晨现切' },
+            C2: { name: '西蓝花/秋葵', icon: '🥦', type: 'veg', tags: ['高纤'], cal: 40, fiber: 3, fat: 0, desc: '十字花科', isFrozen: false, prepTip: '西蓝花提前焯水1分钟（保持翠绿），沥干冷藏，次日直接加热；秋葵早晨现蒸保持脆嫩' },
+            C3: { name: '生菜/菠菜', icon: '🥬', type: 'veg', tags: ['零脂'], cal: 20, fiber: 1.5, fat: 0, desc: '叶菜类，即食凉拌', isFrozen: false, prepTip: '脱水蔬菜盒保存（铺厨房纸吸湿），可提前2-3天洗好，随取随用' },
+            C4: { name: '彩椒/芦笋', icon: '🫑', type: 'veg', tags: ['高纤'], cal: 30, fiber: 2.5, fat: 0, desc: '维C丰富', isFrozen: false, prepTip: '彩椒可提前切条密封冷藏；芦笋提前削去老根，早晨现切保持鲜嫩' },
+            C5: { name: '蘑菇/木耳', icon: '🍄', type: 'veg', tags: ['极高纤'], cal: 25, fiber: 3, fat: 0, desc: '菌菇多糖', isFrozen: false, prepTip: '干木耳提前一晚泡发，冷藏保存2天；鲜蘑菇擦净切片，密封盒保存1天' },
+            C6: { name: '黄瓜/胡萝卜', icon: '🥕', type: 'veg', tags: [], cal: 30, fiber: 2, fat: 0, desc: '爽脆口感', isFrozen: false, prepTip: '胡萝卜可提前切条/刨丝，密封冷藏3天；黄瓜建议现切或切后撒盐杀水保存' }
+        };
+
+        const cookingModes = [
+            {
+                id: 'airfryer',
+                name: '空气炸锅模式',
+                icon: '♨️',
+                color: 'teal',
+                condition: (s) => {
+                    const goodProtein = ['B1', 'B2', 'B6'].includes(s.B);
+                    const goodVeg = ['C1', 'C2', 'C4', 'C5'].includes(s.C);
+                    return goodProtein && goodVeg;
+                },
+                desc: '外酥里嫩，少油健康，复热口感最佳',
+                steps: [
+                    '{B}表面轻拍干，蔬菜{C}切适口大小',
+                    '炸篮铺硅油纸，食材平铺不重叠',
+                    '喷油壶轻喷2下（约3g油），180°C 10-12分钟',
+                    '中途翻面一次，最后2分钟撒调料',
+                    '主食{A}同期微波高火3分钟或蒸锅10分钟'
+                ],
+                time: '15',
+                tips: '高血脂提示：喷油控制在3g以内，避免油炸口感'
+            },
+            {
+                id: 'steam',
+                name: '蒸煮一体模式',
+                icon: '💨',
+                color: 'blue',
+                condition: (s) => {
+                    const goodStaple = ['A2', 'A5', 'A6'].includes(s.A);
+                    const goodProtein = ['B1', 'B4'].includes(s.B);
+                    const goodVeg = ['C2', 'C5'].includes(s.C);
+                    return goodStaple || (goodProtein && goodVeg);
+                },
+                desc: '水分充足，营养保留完整，对肠胃最温和',
+                steps: [
+                    '蒸锅水烧开，上层蒸盘铺{A}和{B}',
+                    '大火蒸8-10分钟（鱼/豆腐8分钟，肉10分钟）',
+                    '最后3分钟加入{C}同蒸（或下层焯水）',
+                    '出锅后淋少许生抽或油醋汁即可'
+                ],
+                time: '15',
+                tips: '零油烹饪，最适合控制血脂'
+            },
+            {
+                id: 'cold',
+                name: '极速冷餐模式',
+                icon: '❄️',
+                color: 'indigo',
+                condition: (s) => {
+                    const goodProtein = ['B3', 'B4', 'B5'].includes(s.B);
+                    const goodVeg = ['C3', 'C6'].includes(s.C);
+                    const goodStaple = ['A1', 'A4'].includes(s.A);
+                    return goodProtein && goodVeg && goodStaple;
+                },
+                desc: '无需动火，5分钟组装，夏日首选',
+                steps: [
+                    '{A}微波解冻加热3分钟，摊凉',
+                    '{B}切块/撕丝，{C}洗净沥干',
+                    '全部装入便当盒，调料单独分装（避免浸泡）',
+                    '食用前再淋上酱汁拌匀'
+                ],
+                time: '5',
+                tips: '冷餐注意：夏季建议带冰袋，菌菇类不建议冷食'
+            },
+            {
+                id: 'hybrid',
+                name: '组合烹饪模式',
+                icon: '⚡',
+                color: 'amber',
+                condition: (s) => true,
+                desc: '灵活组合，最大化利用厨房设备',
+                steps: [
+                    '主食{A}：微波高火3分钟（杂粮饭/玉米）或提前蒸好',
+                    '蛋白{B}：平底锅无油煎/水煮（鸡胸/虾仁3分钟）',
+                    '蔬菜{C}：焯水1分钟或生食',
+                    '组装：主食铺底，蛋白蔬菜分区摆放'
+                ],
+                time: '12',
+                tips: '灵活搭配，适合混合食材组合'
+            }
+        ];
+
+        const flavors = {
+            vinaigrette: { name: '意式油醋汁', desc: '特级初榨橄榄油+意大利黑醋+第戎芥末', icon: '🫒', benefits: '单不饱和脂肪酸助降LDL' },
+            sesame: { name: '和风芝麻酱', desc: '低脂焙煎芝麻+生抽+米醋+少许蜂蜜', icon: '🥜', benefits: '芝麻素抗氧化' },
+            herb: { name: '香草柠檬海盐', desc: '新鲜迷迭香/百里香+柠檬皮屑+海盐+黑胡椒', icon: '🌿', benefits: '零脂低钠，增香提味' },
+            garlic: { name: '蒜蓉辣酱', desc: '鲜蒜+小米辣+生抽+香醋+少许香油', icon: '🧄', benefits: '大蒜素助降胆固醇' },
+            wasabi: { name: '芥末酱油', desc: '山葵酱+刺身酱油+葱花+少许萝卜泥', icon: '🍣', benefits: '适合搭配深海鱼' },
+            nuts: { name: '香脆坚果碎', desc: '核桃碎+杏仁片+白芝麻+少许海盐', icon: '🌰', benefits: '优质植物蛋白与健康脂肪' }
+        };
+
+        let state = { A: null, B: null, C: null, flavor: null };
+        let savedMeals = JSON.parse(localStorage.getItem('mealPrepPlans') || '[]');
+
+        function selectIngredient(category, code, element) {
+            document.querySelectorAll(`[onclick^="selectIngredient('${category}"]`).forEach(el => {
+                el.classList.remove('selected-card');
+            });
+            
+            element.classList.add('selected-card');
+            state[category] = code;
+            
+            updateNutrition();
+            checkCookingMode();
+        }
+
+        function updateNutrition() {
+            const dash = document.getElementById('nutritionDashboard');
+            if (!state.A || !state.B || !state.C) {
+                dash.classList.add('hidden');
+                return;
+            }
+            
+            dash.classList.remove('hidden');
+            
+            const a = ingredients[state.A];
+            const b = ingredients[state.B];
+            const c = ingredients[state.C];
+            
+            const totalCal = a.cal + b.cal + c.cal;
+            const totalFiber = a.fiber + b.fiber + c.fiber;
+            const totalFat = a.fat + b.fat + c.fat;
+            
+            document.getElementById('calCount').textContent = totalCal;
+            document.getElementById('fiberCount').textContent = totalFiber;
+            document.getElementById('fatCount').textContent = totalFat.toFixed(1);
+            
+            const fiberPercent = Math.min((totalFiber / 10) * 100, 100);
+            document.getElementById('fiberBar').style.width = fiberPercent + '%';
+            
+            const badge = document.getElementById('healthBadge');
+            if (totalFat < 8 && totalFiber > 5) {
+                badge.innerHTML = '高血脂黄金组合 ⭐';
+                badge.className = 'px-3 py-1 bg-yellow-400/30 backdrop-blur-sm rounded-full text-xs font-bold border border-yellow-300/50 text-yellow-900';
+            } else {
+                badge.innerHTML = '高血脂友好 ✓';
+                badge.className = 'px-3 py-1 bg-teal-400/30 backdrop-blur-sm rounded-full text-xs font-bold border border-teal-300/50';
+            }
+        }
+
+        function generatePrepTips() {
+            const a = ingredients[state.A];
+            const b = ingredients[state.B];
+            const c = ingredients[state.C];
+            
+            let tips = [];
+            
+            // 冷冻食材解冻提示
+            const frozenItems = [];
+            if (a.isFrozen) frozenItems.push(a.name);
+            if (b.isFrozen) frozenItems.push(b.name);
+            
+            if (frozenItems.length > 0) {
+                tips.push(`<div class="tip-box"><strong>冷冻解冻：</strong>${frozenItems.join('、')}需提前一晚（12小时）从冷冻室移至冷藏室缓慢解冻，早晨即可烹饪。紧急情况下可用冷水浸泡30分钟解冻。</div>`);
+            }
+            
+            // 蔬菜预处理提示
+            if (c.prepTip) {
+                tips.push(`<div class="tip-box"><strong>蔬菜准备：</strong>${c.prepTip}</div>`);
+            }
+            
+            // 蛋白质预处理
+            if (b.prepTip && !b.isFrozen) {
+                tips.push(`<div class="tip-box"><strong>蛋白质处理：</strong>${b.prepTip}</div>`);
+            }
+            
+            // 主食预处理（如果不是冷冻的）
+            if (a.prepTip && !a.isFrozen) {
+                tips.push(`<div class="tip-box"><strong>主食准备：</strong>${a.prepTip}</div>`);
+            }
+            
+            // 通用高效建议
+            tips.push(`<div class="tip-box"><strong>省时秘诀：</strong>使用定时蒸锅/空气炸锅，设定好时间后去洗漱，回来即可装盒。调料建议周末预调好装小瓶，工作日直接淋。</div>`);
+            
+            return tips.join('');
+        }
+
+        function checkCookingMode() {
+            if (!state.A || !state.B || !state.C) return;
+            
+            const modeSection = document.getElementById('modeSection');
+            const modeCards = document.getElementById('modeCards');
+            const flavorSection = document.getElementById('flavorSection');
+            
+            modeSection.classList.remove('hidden');
+            flavorSection.classList.remove('hidden');
+            modeCards.innerHTML = '';
+            
+            let matchedMode = null;
+            for (let mode of cookingModes) {
+                if (mode.condition(state)) {
+                    matchedMode = mode;
+                    if (mode.id !== 'hybrid') break;
+                }
+            }
+            
+            if (matchedMode) {
+                renderModeCard(matchedMode);
+                showResult(matchedMode);
+            }
+        }
+
+        function renderModeCard(mode) {
+            const div = document.createElement('div');
+            div.className = `bg-${mode.color}-50 border-2 border-${mode.color}-200 rounded-2xl p-5 relative overflow-hidden`;
+            
+            let stepsHtml = mode.steps.map((step, idx) => {
+                let formatted = step
+                    .replace(/{A}/g, `<span class="px-1.5 py-0.5 bg-amber-200 rounded text-xs font-bold">${ingredients[state.A].name}</span>`)
+                    .replace(/{B}/g, `<span class="px-1.5 py-0.5 bg-rose-200 rounded text-xs font-bold">${ingredients[state.B].name}</span>`)
+                    .replace(/{C}/g, `<span class="px-1.5 py-0.5 bg-green-200 rounded text-xs font-bold">${ingredients[state.C].name}</span>`);
+                return `<div class="flex gap-3 items-start mb-2"><span class="flex-shrink-0 w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center text-xs font-bold text-gray-600">${idx + 1}</span><span class="text-sm text-gray-700 leading-relaxed">${formatted}</span></div>`;
+            }).join('');
+            
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">${mode.icon}</span>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">${mode.name}</h3>
+                            <p class="text-xs text-gray-500">${mode.desc}</p>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 bg-white rounded-full text-xs font-bold shadow-sm text-gray-600">${mode.time}分钟</span>
+                </div>
+                <div class="space-y-1 mb-3">
+                    ${stepsHtml}
+                </div>
+                <div class="p-3 bg-white/60 rounded-lg border border-${mode.color}-200">
+                    <span class="text-xs font-bold text-${mode.color}-700">💡 ${mode.tips}</span>
+                </div>
+            `;
+            
+            document.getElementById('modeCards').appendChild(div);
+        }
+
+        function showResult(mode) {
+            const resultSection = document.getElementById('resultSection');
+            const a = ingredients[state.A];
+            const b = ingredients[state.B];
+            const c = ingredients[state.C];
+            
+            let dishName = '';
+            const bName = b.name.split('/')[0];
+            const cName = c.name.split('/')[0];
+            const aName = a.name.split('/')[0];
+            
+            if (mode.id === 'airfryer') {
+                dishName = `香烤${bName}配${cName}•${aName}`;
+            } else if (mode.id === 'steam') {
+                dishName = `清蒸${bName}佐${cName}•${aName}`;
+            } else if (mode.id === 'cold') {
+                dishName = `${bName}${aName}沙拉碗`;
+            } else {
+                dishName = `健康${bName}便当`;
+            }
+            
+            document.getElementById('resultTitle').textContent = dishName;
+            document.getElementById('resultDesc').textContent = `${aName}（${a.desc}）+ ${bName}（${b.desc}）+ ${cName}（${c.desc}）。总热量约${a.cal+b.cal+c.cal}kcal，膳食纤维${(a.fiber+b.fiber+c.fiber).toFixed(1)}g，适合职场带饭，微波炉复热3分钟即可享用。`;
+            
+            document.getElementById('badgeA').textContent = a.icon + ' ' + a.name;
+            document.getElementById('badgeB').textContent = b.icon + ' ' + b.name;
+            document.getElementById('badgeC').textContent = c.icon + ' ' + c.name;
+            document.getElementById('methodDisplay').textContent = mode.name.replace('模式', '');
+            document.getElementById('timeDisplay').textContent = mode.time;
+            
+            // 生成备餐贴士
+            document.getElementById('prepContent').innerHTML = generatePrepTips();
+            
+            resultSection.classList.remove('hidden');
+            
+            if (state.flavor) updateFlavorDisplay();
+        }
+
+        function selectFlavor(key) {
+            state.flavor = key;
+            document.querySelectorAll('.flavor-btn').forEach(btn => {
+                if (btn.dataset.flavor === key) {
+                    btn.classList.add('ring-2', 'ring-purple-400', 'bg-purple-50');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50');
+                }
+            });
+            updateFlavorDisplay();
+        }
+
+        function updateFlavorDisplay() {
+            const f = flavors[state.flavor];
+            if (!f) return;
+            
+            document.getElementById('flavorResult').classList.remove('hidden');
+            document.getElementById('flavorText').innerHTML = `${f.icon} ${f.name} <span class="text-sm font-normal opacity-90 block mt-1">${f.desc}</span><span class="text-xs font-normal opacity-75 mt-1 block">✓ ${f.benefits}</span>`;
+        }
+
+        function randomMeal() {
+            resetAll();
+            const aKeys = Object.keys(ingredients).filter(k => k.startsWith('A'));
+            const bKeys = Object.keys(ingredients).filter(k => k.startsWith('B'));
+            const cKeys = Object.keys(ingredients).filter(k => k.startsWith('C'));
+            
+            const rA = aKeys[Math.floor(Math.random() * aKeys.length)];
+            const rB = bKeys[Math.floor(Math.random() * bKeys.length)];
+            const rC = cKeys[Math.floor(Math.random() * cKeys.length)];
+            
+            document.querySelector(`[onclick="selectIngredient('A', '${rA}', this)"]`).click();
+            setTimeout(() => document.querySelector(`[onclick="selectIngredient('B', '${rB}', this)"]`).click(), 100);
+            setTimeout(() => document.querySelector(`[onclick="selectIngredient('C', '${rC}', this)"]`).click(), 200);
+        }
+
+        function resetAll() {
+            state = { A: null, B: null, C: null, flavor: null };
+            document.querySelectorAll('.selected-card').forEach(el => el.classList.remove('selected-card'));
+            document.querySelectorAll('.flavor-btn').forEach(el => el.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50'));
+            
+            document.getElementById('nutritionDashboard').classList.add('hidden');
+            document.getElementById('modeSection').classList.add('hidden');
+            document.getElementById('flavorSection').classList.add('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
+        }
+
+        function generateWeeklyPlan() {
+            const modal = document.getElementById('weeklyModal');
+            const content = document.getElementById('weeklyContent');
+            
+            const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            const plans = [
+                { a: 'A6', b: 'B4', c: 'C5', mode: 'steam' },
+                { a: 'A4', b: 'B1', c: 'C2', mode: 'airfryer' },
+                { a: 'A2', b: 'B2', c: 'C4', mode: 'airfryer' },
+                { a: 'A1', b: 'B3', c: 'C3', mode: 'cold' },
+                { a: 'A7', b: 'B6', c: 'C1', mode: 'steam' }, // 窝窝头+鸡腿
+                { a: 'A8', b: 'B5', c: 'C6', mode: 'cold' },  // 黄馍馍+酸奶
+                { a: 'A9', b: 'B2', c: 'C5', mode: 'hybrid' } // 荞麦馒头+鸡胸
+            ];
+            
+            let html = '<div class="space-y-3">';
+            days.forEach((day, idx) => {
+                const plan = plans[idx];
+                const ingA = ingredients[plan.a];
+                const ingB = ingredients[plan.b];
+                const ingC = ingredients[plan.c];
+                const mode = cookingModes.find(m => m.id === plan.mode);
+                const totalCal = ingA.cal + ingB.cal + ingC.cal;
+                
+                html += `
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-teal-300 transition-colors">
+                        <div class="w-14 h-14 bg-gradient-to-br from-teal-100 to-blue-100 rounded-lg flex items-center justify-center font-bold text-gray-700 flex-shrink-0 text-sm">
+                            ${day}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap gap-1.5 mb-1.5">
+                                <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-medium">${ingA.name}</span>
+                                <span class="text-gray-400 text-[10px]">+</span>
+                                <span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-medium">${ingB.name}</span>
+                                <span class="text-gray-400 text-[10px]">+</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded text-[10px] font-medium">${ingC.name}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-gray-600">
+                                <span class="flex items-center gap-1"><span>${mode.icon}</span> ${mode.name}</span>
+                                <span class="text-gray-400">${totalCal}kcal</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="mt-4 p-4 bg-gradient-to-r from-teal-50 to-blue-50 rounded-xl border border-teal-200">
+                    <h4 class="font-bold text-teal-800 mb-2 text-sm">📋 周日预处理清单（30分钟备好一周）</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs text-teal-700">
+                        <div class="flex items-start gap-1"><span>•</span><span>杂粮饭/藜麦煮好分装5份冷冻</span></div>
+                        <div class="flex items-start gap-1"><span>•</span><span>鸡胸肉/鳕鱼用盐曲腌好分装</span></div>
+                        <div class="flex items-start gap-1"><span>•</span><span>牛腱子卤好切片，每份100g分装</span></div>
+                        <div class="flex items-start gap-1"><span>•</span><span>西蓝花/胡萝卜切好焯水1分钟冷藏</span></div>
+                        <div class="flex items-start gap-1"><span>•</span><span>调料预调：油醋汁装小密封瓶</span></div>
+                        <div class="flex items-start gap-1"><span>•</span><span>窝窝头/黄馍馍购买后分装冷冻</span></div>
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-xs text-yellow-800">
+                    <span class="font-bold">💡 冷冻备餐黄金法则：</span>肉类腌制后冷冻（更入味）、蔬菜焯水后冷冻（保持翠绿）、主食蒸熟后冷冻（口感如初）。提前一晚解冻，次日烹饪省时50%。
+                </div>
+            `;
+            html += '</div>';
+            
+            content.innerHTML = html;
+            modal.classList.remove('hidden');
+        }
+
+        function closeWeeklyModal() {
+            document.getElementById('weeklyModal').classList.add('hidden');
+        }
+
+        function shareMeal() {
+            if (!state.A || !state.B || !state.C) return;
+            
+            const mealData = {
+                ...state,
+                timestamp: new Date().toISOString(),
+                nutrition: {
+                    cal: ingredients[state.A].cal + ingredients[state.B].cal + ingredients[state.C].cal,
+                    fiber: ingredients[state.A].fiber + ingredients[state.B].fiber + ingredients[state.C].fiber,
+                    fat: ingredients[state.A].fat + ingredients[state.B].fat + ingredients[state.C].fat
+                }
+            };
+            
+            savedMeals.unshift(mealData);
+            if (savedMeals.length > 10) savedMeals.pop();
+            localStorage.setItem('mealPrepPlans', JSON.stringify(savedMeals));
+            
+            alert('方案已保存到"我的带饭方案库"！');
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const section = document.getElementById('historySection');
+            const list = document.getElementById('savedMealsList');
+            
+            if (savedMeals.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            section.classList.remove('hidden');
+            list.innerHTML = savedMeals.map((meal, idx) => {
+                const a = ingredients[meal.A];
+                const b = ingredients[meal.B];
+                const c = ingredients[meal.C];
+                const date = new Date(meal.timestamp).toLocaleDateString();
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
+                        <div class="flex items-center gap-2">
+                            <span>${a.icon}${b.icon}${c.icon}</span>
+                            <span class="text-gray-600">${date}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">${meal.nutrition.cal}kcal</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        renderHistory();
+        
+        document.getElementById('weeklyModal').addEventListener('click', function(e) {
+            if (e.target === this) closeWeeklyModal();
+        });
+    </script>
+</body>
+</html>
